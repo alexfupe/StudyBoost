@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Rutas que FileProvider puede compartir con otras apps (ej: al exportar PDF/Markdown).
+    Solo se expone la caché interna — ningún dato privado del usuario.
+-->
+<paths>
+    <cache-path name="shared_exports" path="." />
+</paths>
