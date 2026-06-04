@@ -9,21 +9,18 @@ import androidx.lifecycle.viewModelScope
 import com.toka.studyboost.MainApplication
 import com.toka.studyboost.datos.Usuario
 import com.toka.studyboost.red.RepositorioEstudio
+import com.toka.studyboost.red.MockRepositorioEstudio
 import com.toka.studyboost.red.SesionUsuario
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel de autenticación.
- * Gestiona el estado de sesión del usuario usando DataStore para persistencia.
- *
- * Nota: la autenticación es actualmente simulada (no hay backend real).
- * Para integrar un backend real, reemplazar los métodos de [RepositorioEstudio]
- * que usan `delay()` por llamadas HTTP reales.
+ * ViewModel de autenticación refactorizado para usar el Repositorio (Mock).
  */
 class Autenticacion(application: Application) : AndroidViewModel(application) {
 
-    private val repositorio = RepositorioEstudio((application as MainApplication).database)
+    private val app = application as MainApplication
+    private val repositorio: RepositorioEstudio = MockRepositorioEstudio(app.database)
     private val sesion = SesionUsuario(application)
 
     var usuarioActual by mutableStateOf<Usuario?>(null)
@@ -89,7 +86,7 @@ class Autenticacion(application: Application) : AndroidViewModel(application) {
                 repositorio.cambiarContrasena(actual, nueva)
                 alTerminar()
             } catch (e: Exception) {
-                error = "Error al cambiar contraseña: ${e.message}"
+                error = "Error: ${e.message}"
             } finally {
                 cargando = false
             }

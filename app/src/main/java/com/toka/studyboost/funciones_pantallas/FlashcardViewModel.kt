@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.toka.studyboost.MainApplication
 import com.toka.studyboost.datos.Flashcard
 import com.toka.studyboost.red.RepositorioEstudio
+import com.toka.studyboost.red.MockRepositorioEstudio
 import com.toka.studyboost.utils.AlgoritmoSM2
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -13,16 +14,11 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel dedicado al sistema de flashcards con repetición espaciada (SM-2).
- *
- * Separa la lógica de flashcards del ViewModel de estudio general ([Estudio])
- * para seguir el principio de responsabilidad única.
- *
- * La UI puede observar [tarjetasParaHoy] directamente â€” Room emite actualizaciones
- * automáticamente cada vez que se califica una flashcard.
  */
 class FlashcardViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repositorio = RepositorioEstudio((application as MainApplication).database)
+    private val app = application as MainApplication
+    private val repositorio: RepositorioEstudio = MockRepositorioEstudio(app.database)
 
     /**
      * Flashcards cuya fecha de revisión ya llegó.

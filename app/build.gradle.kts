@@ -50,6 +50,15 @@ android {
         compose = true
         buildConfig = true // Necesario para BuildConfig.GEMINI_API_KEY
     }
+
+    sourceSets {
+        getByName("main") {
+            java.srcDir("build/generated/ksp/main/kotlin")
+        }
+        getByName("debug") {
+            java.srcDir("build/generated/ksp/debug/kotlin")
+        }
+    }
 }
 
 dependencies {

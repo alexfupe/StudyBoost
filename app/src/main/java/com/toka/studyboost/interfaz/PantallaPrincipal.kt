@@ -134,8 +134,21 @@ fun PantallaPrincipal(
                         }
                     },
                     actions = {
-                        IconButton(onClick = onPerfilClick) {
-                            Icon(Icons.Default.AccountCircle, contentDescription = "Perfil", tint = Blanco)
+                        // Círculo con inicial del nombre (puramente visual, no interactivo)
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(AzulCobalto),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = nombreUsuario.take(1).uppercase(),
+                                color = Blanco,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = AzulMarinoProfundo)

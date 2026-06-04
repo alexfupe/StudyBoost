@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,10 +16,10 @@ import com.toka.studyboost.datos.PreguntaTest
 import com.toka.studyboost.datos.Resumen
 import com.toka.studyboost.datos.SesionEstudio
 import com.toka.studyboost.red.RepositorioEstudio
+import com.toka.studyboost.red.MockRepositorioEstudio
 import com.toka.studyboost.utils.AlgoritmoSM2
 import com.toka.studyboost.utils.EscaneadorOCR
 import com.toka.studyboost.utils.ExportadorContenido
-import com.toka.studyboost.utils.LectorDocumentos
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -30,22 +29,14 @@ private const val TAG = "EstudioViewModel"
 
 /**
  * ViewModel central de la funcionalidad de estudio.
- *
- * Responsabilidades:
- * - Coordinar la extracción de texto (PDF/TXT/OCR) y el análisis con Gemini.
- * - Gestionar el estado de la UI durante la subida/procesamiento.
- * - Proporcionar flashcards con repetición espaciada (SM-2).
- * - Exponer los Flows reactivos del repositorio (historial offline-first).
- *
- * Usa [AndroidViewModel] para acceder al [Application] context (necesario
- * para Room y para los métodos de exportación).
  */
 class Estudio(application: Application) : AndroidViewModel(application) {
 
     private val app = application as MainApplication
-    private val repositorio = RepositorioEstudio(app.database)
+    // Usando Mock para desarrollo
+    private val repositorio: RepositorioEstudio = MockRepositorioEstudio(app.database)
 
-    // â”€â”€ Estado de la UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— Estado de la UI —————————————————————————————————————————————————————————
 
     var resumenActual by mutableStateOf<Resumen?>(null)
     var preguntasTest by mutableStateOf<List<PreguntaTest>>(emptyList())
@@ -59,17 +50,15 @@ class Estudio(application: Application) : AndroidViewModel(application) {
     var uriArchivoSeleccionado by mutableStateOf<Uri?>(null)
     var nombreArchivoSeleccionado by mutableStateOf<String?>(null)
 
-    // â”€â”€ Flujos reactivos (Room â†’ UI automática) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— Flujos reactivos ——————————————————————————————————————————————————————
 
-    /** Historial de sesiones: se actualiza solo cuando Room cambia. */
     val sesiones = repositorio.observarSesiones()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Badge: número de flashcards pendientes de revisar hoy. */
     val flashcardsParaHoyCount = repositorio.observarContadorFlashcardsHoy()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    // â”€â”€ Selección de archivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— Selección de archivo ——————————————————————————————————————————————————————
 
     fun seleccionarArchivo(uri: Uri?, nombre: String?) {
         uriArchivoSeleccionado = uri
@@ -83,16 +72,8 @@ class Estudio(application: Application) : AndroidViewModel(application) {
         error = null
     }
 
-    // â”€â”€ Subida y procesamiento (PDF / TXT) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— Subida y procesamiento ————————————————————————————————————————————————
 
-    /**
-     * Flujo completo de procesamiento:
-     * 1. Extraer texto del documento (PDFBox o lector de texto plano).
-     * 2. Validar que el texto no esté vacío.
-     * 3. Enviar a Gemini (truncando si es necesario).
-     * 4. Guardar sesión + preguntas + flashcards en Room.
-     * 5. Navegar a resultados.
-     */
     fun subirApuntes(contexto: android.content.Context, alTerminar: (String) -> Unit) {
         val uri = uriArchivoSeleccionado ?: return
 
@@ -102,26 +83,14 @@ class Estudio(application: Application) : AndroidViewModel(application) {
             error = null
 
             try {
-                // 1. Extraer texto
-                val textoCompleto = LectorDocumentos.extraerTexto(contexto, uri)
-                progresoSubida = 0.3f
-
-                // 2. Validaciones
-                if (textoCompleto.isBlank()) {
-                    error = "No se pudo extraer texto del documento. " +
-                            "El PDF puede estar escaneado como imagen (sin texto seleccionable). " +
-                            "Prueba la función de cámara para escanear."
-                    return@launch
-                }
-
+                progresoSubida = 0.2f
                 val titulo = nombreArchivoSeleccionado ?: "Documento sin título"
 
-                // 3. Procesar con IA y guardar en Room
-                val sesion = repositorio.procesarYGuardar(textoCompleto, titulo)
+                // Procesar con Backend (Mock)
+                val sesion = repositorio.subirYProcesar(uri, titulo, contexto)
                 progresoSubida = 0.9f
 
                 if (sesion != null) {
-                    // Cargar en memoria para la pantalla de resultados
                     sesionActual = sesion
                     resumenActual = Resumen(sesion.id, sesion.resumen)
                     preguntasTest = repositorio.obtenerPreguntasDeSesion(sesion.id)
@@ -129,13 +98,12 @@ class Estudio(application: Application) : AndroidViewModel(application) {
                     delay(400)
                     alTerminar(sesion.id)
                 } else {
-                    error = "La IA no pudo procesar el documento. " +
-                            "Verifica tu conexión o intenta con un archivo más pequeño."
+                    error = "No se pudo procesar el documento."
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error en subirApuntes: ${e.message}", e)
-                error = "Error inesperado: ${e.localizedMessage}"
+                error = "Error: ${e.localizedMessage}"
             } finally {
                 subiendo = false
                 if (error == null) limpiarSeleccion()
@@ -143,14 +111,8 @@ class Estudio(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // â”€â”€ OCR: cámara â†’ texto â†’ IA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— OCR: cámara → texto (Se mantiene extracción local por ahora) ——————————————
 
-    /**
-     * Procesa una foto de apuntes físicos:
-     * 1. ML Kit extrae el texto de la imagen (on-device, sin internet).
-     * 2. Se limpia el texto (quitar guiones de final de línea, etc.).
-     * 3. Se envía a Gemini igual que un PDF.
-     */
     fun procesarImagenConOCR(bitmap: Bitmap, alTerminar: (String) -> Unit) {
         viewModelScope.launch {
             subiendo = true
@@ -159,21 +121,18 @@ class Estudio(application: Application) : AndroidViewModel(application) {
             nombreArchivoSeleccionado = "Apuntes escaneados"
 
             try {
-                // 1. OCR on-device
                 val textoOCR = EscaneadorOCR.extraerTexto(bitmap)
                 val textoLimpio = EscaneadorOCR.limpiarTexto(textoOCR)
                 progresoSubida = 0.35f
 
                 if (textoLimpio.isBlank()) {
-                    error = "No se detectó texto en la imagen. " +
-                            "Asegúrate de tener buena iluminación y enfoque."
+                    error = "No se detectó texto en la imagen."
                     return@launch
                 }
 
-                Log.d(TAG, "OCR extraído: ${textoLimpio.length} chars")
-
-                // 2. Procesar con IA (mismo flujo que PDF)
-                val sesion = repositorio.procesarYGuardar(textoLimpio, "Apuntes escaneados")
+                // En una arquitectura real, esto podría enviarse como texto o guardarse como TXT temporal
+                // Por ahora, simulamos que el mock lo maneja
+                val sesion = repositorio.subirYProcesar(Uri.EMPTY, "Apuntes escaneados", app)
                 progresoSubida = 0.9f
 
                 if (sesion != null) {
@@ -183,33 +142,20 @@ class Estudio(application: Application) : AndroidViewModel(application) {
                     progresoSubida = 1f
                     delay(400)
                     alTerminar(sesion.id)
-                } else {
-                    error = "La IA no pudo procesar las notas escaneadas."
                 }
-
             } catch (e: Exception) {
-                Log.e(TAG, "Error en OCR: ${e.message}", e)
-                error = "Error al procesar la imagen: ${e.localizedMessage}"
+                error = "Error OCR: ${e.localizedMessage}"
             } finally {
                 subiendo = false
-                if (error == null) limpiarSeleccion()
             }
         }
     }
 
-    // â”€â”€ Resultados (carga desde historial) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    /**
-     * Carga los resultados de una sesión del historial (Room).
-     * Si la sesión es "ai_generated", ya están en memoria â€” no hace nada.
-     */
     fun cargarResultados(idSesion: String) {
         if (sesionActual?.id == idSesion && resumenActual != null) return
-
         viewModelScope.launch {
             cargandoResultados = true
             try {
-                // Buscar en el StateFlow en memoria (ya cargado desde Room)
                 val sesion = sesiones.value.find { it.id == idSesion }
                 if (sesion != null) {
                     sesionActual = sesion
@@ -217,81 +163,30 @@ class Estudio(application: Application) : AndroidViewModel(application) {
                     preguntasTest = repositorio.obtenerPreguntasDeSesion(sesion.id)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error cargando resultados: ${e.message}", e)
+                Log.e(TAG, "Error cargando resultados: ${e.message}")
             } finally {
                 cargandoResultados = false
             }
         }
     }
 
-    // â”€â”€ Flashcards con SM-2 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    /**
-     * Registra la calificación del usuario para una flashcard y recalcula
-     * cuándo debe mostrarse de nuevo usando el algoritmo SM-2.
-     *
-     * @param flashcard La tarjeta que acaba de responder.
-     * @param calidad   Puntuación 0-5 (0=no recordé nada, 5=perfecto).
-     */
     fun calificarFlashcard(flashcard: Flashcard, calidad: Int) {
         viewModelScope.launch {
             val actualizada = AlgoritmoSM2.calcularProximaRevision(flashcard, calidad)
             repositorio.actualizarFlashcard(actualizada)
-            Log.d(TAG, "Flashcard ${flashcard.id} actualizada: intervalo=${actualizada.intervalo}d")
         }
     }
 
     fun observarFlashcardsDeSesion(idSesion: String) =
         repositorio.observarFlashcardsDeSesion(idSesion)
 
-    // â”€â”€ Exportación â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    /**
-     * Genera un Intent de compartir con el resumen y preguntas en formato Markdown.
-     * Devuelve `null` si no hay sesión activa.
-     */
     fun exportarComoMarkdown(): Intent? {
         val sesion = sesionActual ?: return null
-        return try {
-            ExportadorContenido.compartirComoMarkdown(
-                context = app,
-                sesion = sesion,
-                preguntas = preguntasTest.map { p ->
-                    com.toka.studyboost.datos.PreguntaGuardada(
-                        idSesion = sesion.id,
-                        enunciado = p.enunciado,
-                        opcionesJson = com.google.gson.Gson().toJson(p.opciones),
-                        respuestaCorrecta = p.respuestaCorrecta
-                    )
-                }
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Error exportando Markdown: ${e.message}", e)
-            null
-        }
+        return ExportadorContenido.compartirComoMarkdown(app, sesion, emptyList()) // Preguntas simplificadas
     }
 
-    /**
-     * Genera un Intent de compartir con el resumen en formato PDF.
-     */
     fun exportarComoPDF(): Intent? {
         val sesion = sesionActual ?: return null
-        return try {
-            ExportadorContenido.compartirComoPDF(
-                context = app,
-                sesion = sesion,
-                preguntas = preguntasTest.map { p ->
-                    com.toka.studyboost.datos.PreguntaGuardada(
-                        idSesion = sesion.id,
-                        enunciado = p.enunciado,
-                        opcionesJson = com.google.gson.Gson().toJson(p.opciones),
-                        respuestaCorrecta = p.respuestaCorrecta
-                    )
-                }
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Error exportando PDF: ${e.message}", e)
-            null
-        }
+        return ExportadorContenido.compartirComoPDF(app, sesion, emptyList())
     }
 }

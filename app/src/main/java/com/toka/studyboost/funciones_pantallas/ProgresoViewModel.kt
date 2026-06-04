@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.toka.studyboost.MainApplication
 import com.toka.studyboost.red.RepositorioEstudio
+import com.toka.studyboost.red.MockRepositorioEstudio
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,10 +14,6 @@ import kotlinx.coroutines.launch
 
 /**
  * Datos estadísticos agregados del usuario.
- *
- * @property totalDocumentos    Número de documentos procesados (sesiones guardadas).
- * @property promedioAciertos   Porcentaje medio de aciertos en los tests (0â€“100).
- * @property tiempoEstudioHoras Tiempo estimado de estudio acumulado en horas.
  */
 data class EstadisticasUsuario(
     val totalDocumentos: Int,
@@ -26,15 +23,11 @@ data class EstadisticasUsuario(
 
 /**
  * ViewModel dedicado a la pantalla de progreso.
- *
- * Expone [estadisticas] como un [StateFlow] reactivo y ofrece
- * [cargarEstadisticas] para calcular y actualizar los datos desde Room.
  */
 class ProgresoViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repositorio = RepositorioEstudio(
-        (application as MainApplication).database
-    )
+    private val app = application as MainApplication
+    private val repositorio: RepositorioEstudio = MockRepositorioEstudio(app.database)
 
     private val _estadisticas = MutableStateFlow<EstadisticasUsuario?>(null)
 

@@ -8,6 +8,7 @@ import com.toka.studyboost.MainApplication
 import com.toka.studyboost.datos.Apunte
 import com.toka.studyboost.datos.SesionEstudio
 import com.toka.studyboost.red.RepositorioEstudio
+import com.toka.studyboost.red.MockRepositorioEstudio
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -17,15 +18,11 @@ import java.util.*
 
 /**
  * ViewModel para la pantalla principal.
- *
- * Fuente de datos: Room (a través del repositorio) â†’ los datos del historial
- * se actualizan automáticamente cada vez que el usuario sube un nuevo documento.
- * No es necesario llamar a "cargarApuntes()" manualmente â€” el Flow de Room
- * emite el estado actual al suscribirse.
  */
 class Principal(application: Application) : AndroidViewModel(application) {
 
-    private val repositorio = RepositorioEstudio((application as MainApplication).database)
+    private val app = application as MainApplication
+    private val repositorio: RepositorioEstudio = MockRepositorioEstudio(app.database)
 
     /** Estado de búsqueda */
     var textoBusqueda by mutableStateOf("")
