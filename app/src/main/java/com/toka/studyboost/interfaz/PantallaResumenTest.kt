@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +33,8 @@ fun PantallaResumenTest(
     logica: Estudio,
     aciertos: Int,
     total: Int,
-    alContinuarAExportar: () -> Unit
+    alContinuarAExportar: () -> Unit,
+    alVolverAlInicio: () -> Unit
 ) {
     val contexto = LocalContext.current
     var guardadoExitoso by remember { mutableStateOf(false) }
@@ -144,6 +146,17 @@ fun PantallaResumenTest(
                         Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = AzulBrillante)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text("Exportar Resultados a PDF", fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    TextButton(
+                        onClick = alVolverAlInicio,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Home, contentDescription = null, tint = GrisClaro)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Volver al Inicio", color = GrisClaro, fontWeight = FontWeight.Medium)
                     }
                 }
             }

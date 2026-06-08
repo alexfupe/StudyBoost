@@ -1,11 +1,11 @@
-﻿package com.toka.studyboost.interfaz
+package com.toka.studyboost.interfaz
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +42,23 @@ fun PantallaPrincipal(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Observar el StateFlow de Room — se actualiza automáticamente al insertar sesiones
-    val apuntesFiltrados by logica.sesionesComoApuntes.collectAsStateWithLifecycle()
+    // Colectamos los flows como State de Compose — Room notifica automáticamente al cambiar
+    val todosLosApuntes by logica.sesionesComoApuntes.collectAsStateWithLifecycle()
+    val totalApuntes by logica.totalApuntesFlow.collectAsStateWithLifecycle()
+    val totalTests by logica.totalTestsFlow.collectAsStateWithLifecycle()
+
+    // Filtrado en la Composable — reacciona correctamente a textoBusqueda Y a la lista
+    val apuntesFiltrados = remember(todosLosApuntes, logica.textoBusqueda) {
+        val texto = logica.textoBusqueda.trim()
+        if (texto.isBlank()) {
+            todosLosApuntes
+        } else {
+            todosLosApuntes.filter { it.titulo.contains(texto, ignoreCase = true) }
+        }
+    }
 
     // Callbacks recordados para evitar recomposiciones innecesarias
     val onSubirClick = remember { alSubirApuntes }
-    val onPerfilClick = remember { alIrAPerfil }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -163,7 +175,7 @@ fun PantallaPrincipal(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                // Barra de búsqueda optimizada
+                // Barra de búsqueda — usa el mutableStateOf del ViewModel directamente
                 TextField(
                     value = logica.textoBusqueda,
                     onValueChange = { logica.textoBusqueda = it },
@@ -173,6 +185,13 @@ fun PantallaPrincipal(
                         .padding(16.dp)
                         .clip(RoundedCornerShape(16.dp)),
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrisClaro) },
+                    trailingIcon = {
+                        if (logica.textoBusqueda.isNotEmpty()) {
+                            IconButton(onClick = { logica.textoBusqueda = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Borrar búsqueda", tint = GrisClaro)
+                            }
+                        }
+                    },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = GrisAzuladoOscuro,
                         unfocusedContainerColor = GrisAzuladoOscuro,
@@ -184,7 +203,7 @@ fun PantallaPrincipal(
                     singleLine = true
                 )
 
-                // Resumen de estadísticas rápidas
+                // Resumen de estadísticas rápidas — se actualizan automáticamente desde Room
                 Text(
                     text = "Resumen",
                     color = Blanco,
@@ -199,10 +218,10 @@ fun PantallaPrincipal(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
-                        TarjetaMiniResumen("Apuntes", logica.totalApuntes, Icons.Default.AutoStories, AzulBrillante)
+                        TarjetaMiniResumen("Apuntes", totalApuntes.toString(), Icons.Default.AutoStories, AzulBrillante)
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        TarjetaMiniResumen("Tests", logica.totalTests, Icons.Default.Quiz, Color(0xFF10B981))
+                        TarjetaMiniResumen("Preguntas", totalTests.toString(), Icons.Default.Quiz, Color(0xFF10B981))
                     }
                 }
 
@@ -214,14 +233,12 @@ fun PantallaPrincipal(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                // La lista ya viene filtrada del ViewModel con derivedStateOf
-                val listaFiltrada = logica.apuntesFiltrados
-
                 if (logica.cargando) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = AzulBrillante)
                     }
-                } else if (listaFiltrada.isEmpty()) {
+                } else if (todosLosApuntes.isEmpty() && logica.textoBusqueda.isBlank()) {
+                    // Estado vacío: no hay ningún documento aún
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("No hay documentos todavía", color = GrisClaro)
@@ -233,19 +250,91 @@ fun PantallaPrincipal(
                         }
                     }
                 } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    // PullToRefresh envuelve siempre la lista para permitir recargar
+                    PullToRefreshBox(
+                        isRefreshing = logica.refrescando,
+                        onRefresh = { logica.refrescar() },
                         modifier = Modifier.weight(1f)
                     ) {
-                        items(
-                            items = listaFiltrada,
-                            key = { it.id } // Key estable para animaciones de lista
-                        ) { apunte ->
-                            TarjetaApunteMejorada(
-                                apunte = apunte,
-                                onClick = { alVerDocumento(apunte.id) }
-                            )
+                        if (apuntesFiltrados.isEmpty()) {
+                            // La búsqueda no encontró resultados
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.SearchOff,
+                                        contentDescription = null,
+                                        tint = GrisClaro,
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("No se encontraron resultados", color = GrisClaro)
+                                    Text(
+                                        "para \"${logica.textoBusqueda}\"",
+                                        color = GrisClaro.copy(alpha = 0.6f),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(
+                                    items = apuntesFiltrados,
+                                    key = { it.id }
+                                ) { apunte ->
+                                    val currentItem by rememberUpdatedState(apunte)
+
+                                    // dismissState con threshold más alto para evitar dismisses accidentales
+                                    val dismissState = rememberSwipeToDismissBoxState(
+                                        confirmValueChange = { value ->
+                                            if (value == SwipeToDismissBoxValue.EndToStart) {
+                                                logica.eliminarSesion(currentItem.id)
+                                                true
+                                            } else false
+                                        },
+                                        positionalThreshold = { totalDistance -> totalDistance * 0.5f }
+                                    )
+
+                                    SwipeToDismissBox(
+                                        state = dismissState,
+                                        enableDismissFromStartToEnd = false,
+                                        modifier = Modifier.animateItem(
+                                            fadeInSpec = tween(200),
+                                            fadeOutSpec = tween(200),
+                                            placementSpec = tween(200)
+                                        ),
+                                        backgroundContent = {
+                                            val color = when (dismissState.targetValue) {
+                                                SwipeToDismissBoxValue.EndToStart -> Color.Red.copy(alpha = 0.8f)
+                                                else -> Color.Transparent
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(20.dp))
+                                                    .background(color),
+                                                contentAlignment = Alignment.CenterEnd
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = "Eliminar",
+                                                    tint = Blanco,
+                                                    modifier = Modifier.padding(horizontal = 20.dp)
+                                                )
+                                            }
+                                        },
+                                        content = {
+                                            TarjetaApunteMejorada(
+                                                apunte = apunte,
+                                                onClick = { alVerDocumento(apunte.id) }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

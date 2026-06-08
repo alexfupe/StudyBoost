@@ -138,6 +138,11 @@ fun NavegacionPrincipal() {
                         navController.navigate("resultados/$id") {
                             popUpTo("principal")
                         }
+                    },
+                    alVolverAlInicio = {
+                        navController.navigate("principal") {
+                            popUpTo("principal") { inclusive = true }
+                        }
                     }
                 )
             }

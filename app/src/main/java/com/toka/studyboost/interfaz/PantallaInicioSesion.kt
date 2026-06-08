@@ -8,10 +8,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.toka.studyboost.R
 import com.toka.studyboost.ui.theme.*
 import com.toka.studyboost.funciones_pantallas.Autenticacion
 
@@ -35,13 +37,30 @@ fun PantallaInicioSesion(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // —— Logo y Nombre de la App ————————————————————
+            Icon(
+                painter = painterResource(id = R.mipmap.logostudyflow),
+                contentDescription = null,
+                modifier = Modifier.size(100.dp),
+                tint = AzulBrillante
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "StudyBoost",
+                color = Blanco,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+
             Text(
                 text = "Iniciar Sesión",
-                color = Blanco,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
+                color = GrisClaro,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
             )
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             TextField(
                 value = email,
