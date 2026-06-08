@@ -1,6 +1,7 @@
 package com.toka.studyboost.funciones_pantallas
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,12 +10,12 @@ import com.toka.studyboost.datos.Apunte
 import com.toka.studyboost.datos.SesionEstudio
 import com.toka.studyboost.red.RepositorioEstudio
 import com.toka.studyboost.red.MockRepositorioEstudio
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+
+private const val TAG = "PrincipalViewModel"
 
 /**
  * ViewModel para la pantalla principal.
@@ -27,12 +28,23 @@ class Principal(application: Application) : AndroidViewModel(application) {
     /** Estado de búsqueda */
     var textoBusqueda by mutableStateOf("")
 
+    var cargando by mutableStateOf(false)
+
     /**
-     * Flujo de sesiones desde Room, mapeado a [Apunte] para compatibilidad con la UI.
-     * [SharingStarted.WhileSubscribed(5_000)]: mantiene el Flow activo 5s después de
-     * que la UI deja de observarlo (para rotaciones de pantalla sin re-query).
+     * Flujo de sesiones originales desde Room.
      */
-    val sesionesComoApuntes = repositorio.observarSesiones()
+    val sesionesRaw: StateFlow<List<SesionEstudio>> = repositorio.observarSesiones()
+        .onEach { Log.d(TAG, "Nuevas sesiones emitidas: ${it.size}") }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    /**
+     * Mapeado a [Apunte] para la UI.
+     */
+    val sesionesComoApuntes: StateFlow<List<Apunte>> = sesionesRaw
         .map { sesiones -> sesiones.map { it.toApunte() } }
         .stateIn(
             scope = viewModelScope,
@@ -48,38 +60,41 @@ class Principal(application: Application) : AndroidViewModel(application) {
     }
 
     // Estadísticas dinámicas basadas en Room
-    val totalApuntes by derivedStateOf { sesionesComoApuntes.value.size.toString() }
-    val totalTests by derivedStateOf { (sesionesComoApuntes.value.sumOf { it.contenido.toIntOrNull() ?: 0 }).toString() }
-    val rachaDias by derivedStateOf { "3 días" } // TODO: calcular racha real
-
-    var cargando by mutableStateOf(false)
-
-    // Compatibilidad â€” ya no hace falta llamar esto, Room emite automáticamente
-    fun cargarApuntes() { /* Room ya emite automáticamente al colectar sesionesComoApuntes */ }
+    val totalApuntes by derivedStateOf { sesionesRaw.value.size.toString() }
+    val totalTests by derivedStateOf { sesionesRaw.value.sumOf { it.totalPreguntas }.toString() }
 
     fun eliminarSesion(apunte: Apunte) {
         viewModelScope.launch {
-            val sesion = SesionEstudio(
-                id = apunte.id,
-                titulo = apunte.titulo,
-                resumen = apunte.contenido,
-                totalPreguntas = 0,
-                fechaCreacion = 0L
-            )
-            repositorio.eliminarSesion(sesion)
+            try {
+                repositorio.eliminarSesion(SesionEstudio(
+                    id = apunte.id,
+                    titulo = apunte.titulo,
+                    resumen = apunte.contenido,
+                    totalPreguntas = 0,
+                    fechaCreacion = 0L
+                ))
+            } catch (e: Exception) {
+                Log.e(TAG, "Error al eliminar sesión: ${e.message}")
+            }
         }
     }
 
-    // â”€â”€ Mapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— Mapper ——————————————————————————————————————————————————————————————————————
 
     private fun SesionEstudio.toApunte(): Apunte {
         val fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
             .format(Date(fechaCreacion))
+        
+        // Si hay un resultado de test, lo añadimos al contenido/subtítulo
+        val infoTest = if (ultimoAcierto != null && ultimoTotal != null) {
+            " | Test: $ultimoAcierto/$ultimoTotal"
+        } else ""
+
         return Apunte(
             id = id,
             titulo = titulo,
-            fecha = fecha,
-            contenido = totalPreguntas.toString() // Reutilizamos contenido para el conteo
+            fecha = fecha + infoTest,
+            contenido = resumen
         )
     }
 }

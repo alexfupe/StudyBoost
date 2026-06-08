@@ -17,5 +17,8 @@ data class SesionEstudio(
     val fechaCreacion: Long = System.currentTimeMillis(),
     val resumen: String,
     val totalPreguntas: Int,
-    val mimeTypeArchivo: String = "application/pdf"
+    val mimeTypeArchivo: String = "application/pdf",
+    val ultimoAcierto: Int? = null,
+    val ultimoTotal: Int? = null,
+    val fechaUltimoTest: Long? = null
 )

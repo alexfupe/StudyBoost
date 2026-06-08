@@ -18,10 +18,12 @@ import com.toka.studyboost.funciones_pantallas.Estudio
 @Composable
 fun PantallaTestInteractivo(
     logica: Estudio,
-    alTerminar: () -> Unit
+    alTerminar: (Int, Int) -> Unit
 ) {
     var indicePregunta by remember { mutableIntStateOf(0) }
     var opcionSeleccionada by remember { mutableStateOf<Int?>(null) }
+    var aciertos by remember { mutableIntStateOf(0) }
+    val respuestasInternas = remember { mutableStateMapOf<Int, Int>() }
     val preguntas = logica.preguntasTest
 
     Surface(
@@ -93,11 +95,21 @@ fun PantallaTestInteractivo(
 
                 Button(
                     onClick = {
+                        val seleccion = opcionSeleccionada ?: return@Button
+                        respuestasInternas[indicePregunta] = seleccion
+
+                        // Verificar si es correcta antes de pasar
+                        if (seleccion == pregunta.respuestaCorrecta) {
+                            aciertos++
+                        }
+
                         if (indicePregunta < preguntas.size - 1) {
                             indicePregunta++
                             opcionSeleccionada = null
                         } else {
-                            alTerminar()
+                            // Guardamos las respuestas en la lógica antes de terminar
+                            logica.respuestasUsuario = respuestasInternas.toMap()
+                            alTerminar(aciertos, preguntas.size)
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),

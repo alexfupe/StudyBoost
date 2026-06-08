@@ -22,6 +22,7 @@ import com.toka.studyboost.utils.EscaneadorOCR
 import com.toka.studyboost.utils.ExportadorContenido
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -40,6 +41,7 @@ class Estudio(application: Application) : AndroidViewModel(application) {
 
     var resumenActual by mutableStateOf<Resumen?>(null)
     var preguntasTest by mutableStateOf<List<PreguntaTest>>(emptyList())
+    var respuestasUsuario by mutableStateOf<Map<Int, Int>>(emptyMap())
     var sesionActual by mutableStateOf<SesionEstudio?>(null)
 
     var progresoSubida by mutableStateOf(0f)
@@ -74,6 +76,8 @@ class Estudio(application: Application) : AndroidViewModel(application) {
 
     // —— Subida y procesamiento ————————————————————————————————————————————————
 
+    private val sesion = com.toka.studyboost.red.SesionUsuario(application)
+
     fun subirApuntes(contexto: android.content.Context, alTerminar: (String) -> Unit) {
         val uri = uriArchivoSeleccionado ?: return
 
@@ -86,17 +90,20 @@ class Estudio(application: Application) : AndroidViewModel(application) {
                 progresoSubida = 0.2f
                 val titulo = nombreArchivoSeleccionado ?: "Documento sin título"
 
-                // Procesar con Backend (Mock)
-                val sesion = repositorio.subirYProcesar(uri, titulo, contexto)
+                val idStr = sesion.userId.first() ?: throw Exception("Debes iniciar sesión primero")
+                val userId = idStr.toIntOrNull() ?: 0
+
+                // Procesar con Backend real
+                val sesionEstudio = repositorio.subirYProcesar(uri, titulo, contexto, userId)
                 progresoSubida = 0.9f
 
-                if (sesion != null) {
-                    sesionActual = sesion
-                    resumenActual = Resumen(sesion.id, sesion.resumen)
-                    preguntasTest = repositorio.obtenerPreguntasDeSesion(sesion.id)
+                if (sesionEstudio != null) {
+                    sesionActual = sesionEstudio
+                    resumenActual = Resumen(sesionEstudio.id, sesionEstudio.resumen)
+                    preguntasTest = repositorio.obtenerPreguntasDeSesion(sesionEstudio.id)
                     progresoSubida = 1f
                     delay(400)
-                    alTerminar(sesion.id)
+                    alTerminar(sesionEstudio.id)
                 } else {
                     error = "No se pudo procesar el documento."
                 }
@@ -111,7 +118,7 @@ class Estudio(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // —— OCR: cámara → texto (Se mantiene extracción local por ahora) ——————————————
+    // —— OCR: cámara → texto (Envía a API Python) ——————————————
 
     fun procesarImagenConOCR(bitmap: Bitmap, alTerminar: (String) -> Unit) {
         viewModelScope.launch {
@@ -130,18 +137,20 @@ class Estudio(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                // En una arquitectura real, esto podría enviarse como texto o guardarse como TXT temporal
-                // Por ahora, simulamos que el mock lo maneja
-                val sesion = repositorio.subirYProcesar(Uri.EMPTY, "Apuntes escaneados", app)
+                val idStr = sesion.userId.first() ?: throw Exception("Debes iniciar sesión primero")
+                val userId = idStr.toIntOrNull() ?: 0
+
+                // Mandamos el texto extraído a nuestro nuevo endpoint de la API
+                val sesionEstudio = repositorio.subirYProcesarTexto(textoLimpio, "Apuntes escaneados OCR", userId)
                 progresoSubida = 0.9f
 
-                if (sesion != null) {
-                    sesionActual = sesion
-                    resumenActual = Resumen(sesion.id, sesion.resumen)
-                    preguntasTest = repositorio.obtenerPreguntasDeSesion(sesion.id)
+                if (sesionEstudio != null) {
+                    sesionActual = sesionEstudio
+                    resumenActual = Resumen(sesionEstudio.id, sesionEstudio.resumen)
+                    preguntasTest = repositorio.obtenerPreguntasDeSesion(sesionEstudio.id)
                     progresoSubida = 1f
                     delay(400)
-                    alTerminar(sesion.id)
+                    alTerminar(sesionEstudio.id)
                 }
             } catch (e: Exception) {
                 error = "Error OCR: ${e.localizedMessage}"
@@ -188,5 +197,11 @@ class Estudio(application: Application) : AndroidViewModel(application) {
     fun exportarComoPDF(): Intent? {
         val sesion = sesionActual ?: return null
         return ExportadorContenido.compartirComoPDF(app, sesion, emptyList())
+    }
+
+    fun guardarResultadoTest(idSesion: String, aciertos: Int, total: Int) {
+        viewModelScope.launch {
+            repositorio.guardarResultadoTest(idSesion, aciertos, total)
+        }
     }
 }

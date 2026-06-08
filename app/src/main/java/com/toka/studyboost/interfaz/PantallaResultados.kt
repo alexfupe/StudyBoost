@@ -26,11 +26,13 @@ import com.toka.studyboost.funciones_pantallas.Estudio
  * - Tab "Exportar": permite compartir como Markdown o PDF.
  * - Carga desde Room si la sesión no está en memoria (modo offline).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaResultados(
     logica: Estudio,
     idApunte: String,
-    alIrATest: () -> Unit
+    alIrATest: () -> Unit,
+    alCerrar: () -> Unit
 ) {
     val contexto = LocalContext.current
     var tabSeleccionada by remember { mutableIntStateOf(0) }
@@ -40,16 +42,26 @@ fun PantallaResultados(
         logica.cargarResultados(idApunte)
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = AzulMarinoProfundo
-    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(logica.sesionActual?.titulo ?: "Resultados", color = Blanco) },
+                actions = {
+                    TextButton(onClick = alCerrar) {
+                        Text("Cerrar", color = AzulBrillante, fontWeight = FontWeight.Bold)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = AzulMarinoProfundo)
+            )
+        },
+        containerColor = AzulMarinoProfundo
+    ) { padding ->
         if (logica.cargandoResultados) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = AzulBrillante)
             }
         } else {
-            Column {
+            Column(modifier = Modifier.padding(padding)) {
                 // —— Barra de tabs ———————————————————————
                 TabRow(
                     selectedTabIndex = tabSeleccionada,
@@ -140,11 +152,10 @@ fun PantallaResultados(
                                             fontWeight = FontWeight.Medium
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        pregunta.opciones.forEachIndexed { j, opcion ->
-                                            val esCorrecta = j == pregunta.respuestaCorrecta
+                                        pregunta.opciones.forEachIndexed { _, opcion ->
                                             Text(
-                                                text = "  ${if (esCorrecta) "✅" else "○"} $opcion",
-                                                color = if (esCorrecta) AzulBrillante else GrisClaro,
+                                                text = "  ○ $opcion",
+                                                color = GrisClaro,
                                                 fontSize = 13.sp
                                             )
                                         }

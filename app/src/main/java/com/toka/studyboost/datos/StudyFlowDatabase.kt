@@ -19,7 +19,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [SesionEstudio::class, PreguntaGuardada::class, Flashcard::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class StudyBoostDatabase : RoomDatabase() {

@@ -1,12 +1,16 @@
 package com.toka.studyboost.red
 
-import com.google.gson.annotations.SerializedName
-
 /**
- * DTOs para la comunicación con el Backend.
+ * DTOs para la comunicación con el Backend ASP.NET Core.
  */
 
 // —— Autenticación ————————————————————————————————————————————————————————————
+
+data class User(
+    val id: Int,
+    val name: String,
+    val email: String
+)
 
 data class LoginRequest(
     val email: String,
@@ -14,30 +18,39 @@ data class LoginRequest(
 )
 
 data class RegisterRequest(
-    val nombre: String,
+    val name: String,
     val email: String,
     val password: String
 )
 
-data class AuthResponse(
-    val id: String,
-    val nombre: String,
+data class ChangePasswordRequest(
     val email: String,
-    val token: String? = null
+    val oldPassword: String,
+    val newPassword: String
 )
 
-// —— Procesamiento de Documentos ———————————————————————————————————————————————
+// —— Documentos (PDFs) ————————————————————————————————————————————————————————
 
-data class UploadResponse(
-    val id: String,
-    val message: String
+data class Document(
+    val id: Int,
+    val userId: Int,
+    val fileName: String,
+    val filePath: String?,
+    val extractedText: String?,
+    val summary: String?,
+    val status: String?,
+    val uploadDate: String?
 )
 
-data class ResultadosResponse(
-    val summary: String,
-    val questions: List<PreguntaRemota>
+data class UploadTextRequest(
+    val userId: Int,
+    val fileName: String,
+    val text: String
 )
 
+/**
+ * Modelo auxiliar para el Mock y el endpoint de preguntas.
+ */
 data class PreguntaRemota(
     val question: String,
     val options: List<String>,

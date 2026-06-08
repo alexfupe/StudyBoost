@@ -136,7 +136,7 @@ fun PantallaSubirApuntes(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Selecciona un PDF/TXT o escanea tus apuntes con la cámara.",
+                    text = "Selecciona un PDF o escanea tus apuntes con la cámara.",
                     color = GrisClaro,
                     textAlign = TextAlign.Center,
                     fontSize = 16.sp
@@ -179,29 +179,35 @@ fun PantallaSubirApuntes(
                     }
                 }
 
-                // —— Botón: seleccionar archivo —————————————————
-                Button(
-                    onClick = { selectorArchivos.launch("*/*") },
+                // —— Botón 1: Seleccionar PDF —————————————————
+                OutlinedButton(
+                    onClick = { selectorArchivos.launch("application/pdf") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GrisAzuladoOscuro),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AzulBrillante),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, AzulBrillante),
                     shape = RoundedCornerShape(16.dp),
                     enabled = logica.uriArchivoSeleccionado == null
                 ) {
+                    Icon(
+                        Icons.Default.Description,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = if (logica.uriArchivoSeleccionado == null)
-                            "Seleccionar PDF o TXT"
+                            "Seleccionar PDF"
                         else
                             "Archivo seleccionado ✓",
-                        color = Blanco,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // —— Botón: cámara OCR ————————————————————————
+                // —— Botón 2: Cámara OCR ————————————————————————
                 OutlinedButton(
                     onClick = {
                         val permisoOk = ContextCompat.checkSelfPermission(
@@ -231,7 +237,7 @@ fun PantallaSubirApuntes(
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         "Escanear apuntes físicos",
                         fontWeight = FontWeight.Bold

@@ -1,4 +1,4 @@
-﻿package com.toka.studyboost.funciones_pantallas
+package com.toka.studyboost.funciones_pantallas
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -83,7 +83,8 @@ class Autenticacion(application: Application) : AndroidViewModel(application) {
             cargando = true
             error = null
             try {
-                repositorio.cambiarContrasena(actual, nueva)
+                val email = usuarioActual?.email ?: throw Exception("No hay usuario logueado")
+                repositorio.cambiarContrasena(email, actual, nueva)
                 alTerminar()
             } catch (e: Exception) {
                 error = "Error: ${e.message}"

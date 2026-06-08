@@ -1,5 +1,6 @@
 ﻿package com.toka.studyboost.interfaz
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,7 +36,6 @@ fun PantallaPrincipal(
     alSubirApuntes: () -> Unit,
     alVerDocumento: (String) -> Unit,
     alIrAPerfil: () -> Unit,
-    alIrAProgreso: () -> Unit,
     alCerrarSesion: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -97,13 +97,6 @@ fun PantallaPrincipal(
                     scope.launch {
                         drawerState.close()
                         alIrAPerfil()
-                    }
-                }
-
-                DrawerMenuItem("Estadísticas", Icons.Default.BarChart) {
-                    scope.launch {
-                        drawerState.close()
-                        alIrAProgreso()
                     }
                 }
 
@@ -193,20 +186,24 @@ fun PantallaPrincipal(
 
                 // Resumen de estadísticas rápidas
                 Text(
-                    text = "Resumen de hoy",
+                    text = "Resumen",
                     color = Blanco,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(bottom = 16.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item(key = "stats_apuntes") { TarjetaMiniResumen("Apuntes", logica.totalApuntes, Icons.Default.AutoStories, AzulBrillante) }
-                    item(key = "stats_tests") { TarjetaMiniResumen("Tests", logica.totalTests, Icons.Default.Quiz, Color(0xFF10B981)) }
-                    item(key = "stats_racha") { TarjetaMiniResumen("Racha", logica.rachaDias, Icons.Default.LocalFireDepartment, Color(0xFFF59E0B)) }
+                    Box(modifier = Modifier.weight(1f)) {
+                        TarjetaMiniResumen("Apuntes", logica.totalApuntes, Icons.Default.AutoStories, AzulBrillante)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        TarjetaMiniResumen("Tests", logica.totalTests, Icons.Default.Quiz, Color(0xFF10B981))
+                    }
                 }
 
                 Text(
@@ -275,7 +272,7 @@ fun DrawerMenuItem(texto: String, icono: ImageVector, color: Color = Blanco, onC
 @Composable
 fun TarjetaMiniResumen(titulo: String, valor: String, icono: ImageVector, colorIcono: Color) {
     Card(
-        modifier = Modifier.width(140.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = GrisAzuladoOscuro),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -290,12 +287,17 @@ fun TarjetaMiniResumen(titulo: String, valor: String, icono: ImageVector, colorI
 
 @Composable
 fun TarjetaApunteMejorada(apunte: Apunte, onClick: () -> Unit) {
+    val tieneTest = apunte.fecha.contains("| Test:")
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = GrisAzuladoOscuro),
+        colors = CardDefaults.cardColors(
+            containerColor = if (tieneTest) AzulCobalto.copy(alpha = 0.15f) else GrisAzuladoOscuro
+        ),
         shape = RoundedCornerShape(20.dp),
+        border = if (tieneTest) BorderStroke(1.dp, AzulBrillante.copy(alpha = 0.5f)) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -308,11 +310,14 @@ fun TarjetaApunteMejorada(apunte: Apunte, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(AzulCobalto.copy(alpha = 0.2f)),
+                    .background(
+                        if (tieneTest) AzulBrillante.copy(alpha = 0.2f) 
+                        else AzulCobalto.copy(alpha = 0.2f)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.PictureAsPdf,
+                    imageVector = if (tieneTest) Icons.Default.Quiz else Icons.Default.PictureAsPdf,
                     contentDescription = null,
                     tint = AzulBrillante,
                     modifier = Modifier.size(32.dp)
@@ -327,12 +332,18 @@ fun TarjetaApunteMejorada(apunte: Apunte, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = GrisClaro, modifier = Modifier.size(12.dp))
+                    Icon(
+                        imageVector = if (tieneTest) Icons.Default.CheckCircle else Icons.Default.CalendarToday, 
+                        contentDescription = null, 
+                        tint = if (tieneTest) Color(0xFF10B981) else GrisClaro, 
+                        modifier = Modifier.size(12.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = apunte.fecha,
-                        color = GrisClaro,
-                        fontSize = 12.sp
+                        color = if (tieneTest) Blanco else GrisClaro,
+                        fontSize = 12.sp,
+                        fontWeight = if (tieneTest) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }

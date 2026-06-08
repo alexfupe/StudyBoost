@@ -1,4 +1,4 @@
-﻿package com.toka.studyboost.red
+package com.toka.studyboost.red
 
 import android.content.Context
 import android.net.Uri
@@ -15,8 +15,10 @@ interface RepositorioEstudio {
     
     // —— Procesamiento —————————————————————————————————————————————————————————
     /** Sube un archivo y devuelve la sesión creada. */
-    suspend fun subirYProcesar(uri: Uri, titulo: String, contexto: Context): SesionEstudio?
+    suspend fun subirYProcesar(uri: Uri, titulo: String, contexto: Context, userId: Int): SesionEstudio?
+    suspend fun subirYProcesarTexto(texto: String, titulo: String, userId: Int): SesionEstudio?
     suspend fun obtenerPreguntasDeSesion(idSesion: String): List<PreguntaTest>
+    suspend fun guardarResultadoTest(idSesion: String, aciertos: Int, total: Int)
     
     // —— Flashcards ————————————————————————————————————————————————————————————
     fun observarFlashcardsParaHoy(): Flow<List<Flashcard>>
@@ -27,5 +29,5 @@ interface RepositorioEstudio {
     // —— Autenticación —————————————————————————————————————————————————————————
     suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): Usuario
     suspend fun iniciarSesion(email: String, contrasena: String): Usuario
-    suspend fun cambiarContrasena(actual: String, nueva: String)
+    suspend fun cambiarContrasena(email: String, actual: String, nueva: String)
 }

@@ -6,11 +6,13 @@ import com.toka.studyboost.datos.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 
 /**
- * Implementación Fake para pruebas y desarrollo paralelo.
+ * Implementación Fake adaptada a los nuevos modelos del Backend ASP.NET Core.
  */
 class MockRepositorioEstudio(
     private val db: StudyBoostDatabase
@@ -23,46 +25,64 @@ class MockRepositorioEstudio(
         db.sesionEstudioDao().eliminar(sesion)
     }
 
-    override suspend fun subirYProcesar(uri: Uri, titulo: String, contexto: Context): SesionEstudio? {
-        // Simular red
-        delay(3000)
-
-        val sesionId = UUID.randomUUID().toString()
+    override suspend fun subirYProcesar(uri: Uri, titulo: String, contexto: Context, userId: Int): SesionEstudio? {
+        // Leemos el archivo del Uri
+        val inputStream = contexto.contentResolver.openInputStream(uri) ?: return null
+        val tempFile = java.io.File.createTempFile("upload", ".pdf", contexto.cacheDir)
+        inputStream.use { input ->
+            tempFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
         
-        // Mock de respuesta del backend
-        val mockResumen = "Este es un resumen generado por el servidor a partir del archivo $titulo. " +
-                "El contenido principal trata sobre los fundamentos de la arquitectura cliente-servidor y el uso de Mocks."
-        
-        val mockPreguntas = listOf(
-            PreguntaRemota(
-                "¿Cuál es el beneficio de usar Mocks?",
-                listOf("Desarrollo paralelo", "Consumo de batería", "No sirven para nada"),
-                0
-            ),
-            PreguntaRemota(
-                "¿Qué método HTTP se usa para subir archivos?",
-                listOf("GET", "POST Multipart", "DELETE"),
-                1
-            )
-        )
+        val requestFile = tempFile.asRequestBody("application/pdf".toMediaTypeOrNull())
+        val body = okhttp3.MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
+        val userBody = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
 
-        // Guardar en la DB local (Room) para que la UI lo vea
+        // Subimos el documento a la API
+        val document = RetrofitClient.instance.uploadDocument(body, userBody)
+        tempFile.delete()
+
+        return procesarDocumento(document, titulo)
+    }
+
+    override suspend fun subirYProcesarTexto(texto: String, titulo: String, userId: Int): SesionEstudio? {
+        val request = UploadTextRequest(userId, titulo, texto)
+        val document = RetrofitClient.instance.uploadText(request)
+        return procesarDocumento(document, titulo)
+    }
+
+    private suspend fun procesarDocumento(document: Document, titulo: String): SesionEstudio {
+        // Pedimos las preguntas a la API
+        val responseBody = RetrofitClient.instance.generateQuestions(document.id)
+        val rawQuestions = responseBody.string()
+        
+        // El API devuelve un JSON string con las preguntas, lo parseamos
+        val typeToken = object : com.google.gson.reflect.TypeToken<List<PreguntaRemota>>() {}.type
+        val mockPreguntas: List<PreguntaRemota> = try {
+            com.google.gson.Gson().fromJson(rawQuestions, typeToken) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
         val sesion = SesionEstudio(
-            id = sesionId,
+            id = document.id.toString(),
             titulo = titulo,
-            resumen = mockResumen,
+            resumen = document.summary ?: "",
             totalPreguntas = mockPreguntas.size
         )
-        db.sesionEstudioDao().insertar(sesion)
-
+        
         val preguntasRoom = mockPreguntas.map { q ->
             PreguntaGuardada(
-                idSesion = sesionId,
+                idSesion = sesion.id,
                 enunciado = q.question,
                 opcionesJson = com.google.gson.Gson().toJson(q.options),
                 respuestaCorrecta = q.correct
             )
         }
+
+        // Insertar todo en una transacción implícita (Room lo maneja)
+        db.sesionEstudioDao().insertar(sesion)
         db.preguntaGuardadaDao().insertarTodas(preguntasRoom)
 
         return sesion
@@ -80,6 +100,18 @@ class MockRepositorioEstudio(
             }
     }
 
+    override suspend fun guardarResultadoTest(idSesion: String, aciertos: Int, total: Int) {
+        val sesion = db.sesionEstudioDao().obtenerPorId(idSesion)
+        if (sesion != null) {
+            val actualizada = sesion.copy(
+                ultimoAcierto = aciertos,
+                ultimoTotal = total,
+                fechaUltimoTest = System.currentTimeMillis()
+            )
+            db.sesionEstudioDao().insertar(actualizada)
+        }
+    }
+
     override fun observarFlashcardsParaHoy(): Flow<List<Flashcard>> =
         db.flashcardDao().observarParaRevisar()
 
@@ -93,17 +125,23 @@ class MockRepositorioEstudio(
     override fun observarContadorFlashcardsHoy(): Flow<Int> =
         db.flashcardDao().contarParaHoy()
 
-    override suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): Usuario {
-        delay(1500)
-        return Usuario("1", nombre, email)
+    override suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): com.toka.studyboost.datos.Usuario {
+        val reqRegistro = RegisterRequest(nombre, email, contrasena)
+        RetrofitClient.instance.register(reqRegistro)
+        
+        val reqLogin = LoginRequest(email, contrasena)
+        val apiUser = RetrofitClient.instance.login(reqLogin)
+        return com.toka.studyboost.datos.Usuario(apiUser.id.toString(), apiUser.name, apiUser.email)
     }
 
-    override suspend fun iniciarSesion(email: String, contrasena: String): Usuario {
-        delay(1500)
-        return Usuario("1", "Usuario de Prueba", email)
+    override suspend fun iniciarSesion(email: String, contrasena: String): com.toka.studyboost.datos.Usuario {
+        val request = LoginRequest(email, contrasena)
+        val apiUser = RetrofitClient.instance.login(request)
+        return com.toka.studyboost.datos.Usuario(apiUser.id.toString(), apiUser.name, apiUser.email)
     }
 
-    override suspend fun cambiarContrasena(actual: String, nueva: String) {
-        delay(2000)
+    override suspend fun cambiarContrasena(email: String, actual: String, nueva: String) {
+        val req = ChangePasswordRequest(email, actual, nueva)
+        RetrofitClient.instance.changePassword(req)
     }
 }
