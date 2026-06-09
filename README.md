@@ -297,18 +297,7 @@ Donde `q` = calificación (0-5), EF mínimo = 1.3
 
 ---
 
-## 📄 Licencia
 
-Este proyecto está bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
----
 
-## 👤 Autor
 
-**Alex** — [@alexfupe](https://github.com/alexfupe)
-
----
-
-<p align="center">
-  Hecho con ❤️ y mucho ☕ para estudiantes que quieren aprender mejor.
-</p>
