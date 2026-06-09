@@ -29,6 +29,11 @@ import com.toka.studyboost.ui.theme.*
 import com.toka.studyboost.funciones_pantallas.Principal
 import kotlinx.coroutines.launch
 
+/**
+ * Pantalla principal (Dashboard).
+ * Muestra el resumen de estadísticas, barra de búsqueda y la lista de documentos recientes.
+ * Soporta gestos como swipe-to-delete y pull-to-refresh.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaPrincipal(
@@ -369,6 +374,10 @@ fun TarjetaMiniResumen(titulo: String, valor: String, icono: ImageVector, colorI
     }
 }
 
+/**
+ * Representa una tarjeta individual en la lista de documentos.
+ * Cambia su estilo visual si el documento ya tiene un test completado.
+ */
 @Composable
 fun TarjetaApunteMejorada(apunte: Apunte, onClick: () -> Unit) {
     val tieneTest = apunte.fecha.contains("| Test:")

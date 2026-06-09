@@ -28,6 +28,11 @@ import androidx.compose.ui.unit.sp
 import com.toka.studyboost.ui.theme.*
 import com.toka.studyboost.funciones_pantallas.Estudio
 
+/**
+ * Pantalla final del flujo de test.
+ * Muestra la puntuación obtenida, permite guardar el resultado, exportar a PDF
+ * y ofrece una revisión detallada de cada pregunta con feedback visual (Acierto/Error).
+ */
 @Composable
 fun PantallaResumenTest(
     logica: Estudio,

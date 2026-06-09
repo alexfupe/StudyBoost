@@ -12,7 +12,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 
 /**
- * Implementación Fake adaptada a los nuevos modelos del Backend ASP.NET Core.
+ * Implementación del repositorio que conecta con la API externa (Retrofit)
+ * y la base de datos local (Room). Gestiona la persistencia de sesiones y preguntas.
  */
 class MockRepositorioEstudio(
     private val db: StudyBoostDatabase

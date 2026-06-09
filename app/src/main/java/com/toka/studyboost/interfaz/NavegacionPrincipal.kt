@@ -17,6 +17,10 @@ import com.toka.studyboost.funciones_pantallas.Autenticacion
 import com.toka.studyboost.funciones_pantallas.Estudio
 import com.toka.studyboost.funciones_pantallas.Principal
 
+/**
+ * Nodo central de navegación de la aplicación.
+ * Define todas las rutas, transiciones entre pantallas y la inyección de ViewModels.
+ */
 @Composable
 fun NavegacionPrincipal() {
     val navController = rememberNavController()

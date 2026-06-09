@@ -19,7 +19,8 @@ import java.util.*
 private const val TAG = "PrincipalViewModel"
 
 /**
- * ViewModel para la pantalla principal.
+ * ViewModel principal que gestiona el estado y la lógica de la pantalla de inicio.
+ * Se encarga de observar la base de datos Room, filtrar documentos y gestionar estadísticas.
  */
 class Principal(application: Application) : AndroidViewModel(application) {
 

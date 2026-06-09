@@ -29,7 +29,8 @@ import kotlinx.coroutines.launch
 private const val TAG = "EstudioViewModel"
 
 /**
- * ViewModel central de la funcionalidad de estudio.
+ * ViewModel central que orquestra el procesamiento de documentos con IA.
+ * Gestiona la subida de PDFs, OCR, generación de resúmenes y persistencia de resultados de tests.
  */
 class Estudio(application: Application) : AndroidViewModel(application) {
 
@@ -78,6 +79,11 @@ class Estudio(application: Application) : AndroidViewModel(application) {
 
     private val sesion = com.toka.studyboost.red.SesionUsuario(application)
 
+    /**
+     * Sube y procesa un archivo PDF seleccionado para generar un resumen y preguntas.
+     * @param contexto Contexto de la aplicación para acceder al ContentResolver.
+     * @param alTerminar Callback que se ejecuta tras el éxito, devolviendo el ID de la sesión.
+     */
     fun subirApuntes(contexto: android.content.Context, alTerminar: (String) -> Unit) {
         val uri = uriArchivoSeleccionado ?: return
 
