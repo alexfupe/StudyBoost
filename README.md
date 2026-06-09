@@ -296,8 +296,3 @@ Donde `q` = calificación (0-5), EF mínimo = 1.3
 ```
 
 ---
-
-
-
-
-
