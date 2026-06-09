@@ -11,13 +11,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.toka.studyboost.MainApplication
-import com.toka.studyboost.datos.Flashcard
 import com.toka.studyboost.datos.PreguntaTest
 import com.toka.studyboost.datos.Resumen
 import com.toka.studyboost.datos.SesionEstudio
 import com.toka.studyboost.red.RepositorioEstudio
 import com.toka.studyboost.red.MockRepositorioEstudio
-import com.toka.studyboost.utils.AlgoritmoSM2
 import com.toka.studyboost.utils.EscaneadorOCR
 import com.toka.studyboost.utils.ExportadorContenido
 import kotlinx.coroutines.delay
@@ -57,9 +55,6 @@ class Estudio(application: Application) : AndroidViewModel(application) {
 
     val sesiones = repositorio.observarSesiones()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val flashcardsParaHoyCount = repositorio.observarContadorFlashcardsHoy()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     // —— Selección de archivo ——————————————————————————————————————————————————————
 
@@ -185,15 +180,6 @@ class Estudio(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun calificarFlashcard(flashcard: Flashcard, calidad: Int) {
-        viewModelScope.launch {
-            val actualizada = AlgoritmoSM2.calcularProximaRevision(flashcard, calidad)
-            repositorio.actualizarFlashcard(actualizada)
-        }
-    }
-
-    fun observarFlashcardsDeSesion(idSesion: String) =
-        repositorio.observarFlashcardsDeSesion(idSesion)
 
     fun exportarComoMarkdown(): Intent? {
         val sesion = sesionActual ?: return null

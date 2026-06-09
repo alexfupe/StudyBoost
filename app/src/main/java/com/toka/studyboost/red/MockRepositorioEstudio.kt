@@ -113,19 +113,6 @@ class MockRepositorioEstudio(
         }
     }
 
-    override fun observarFlashcardsParaHoy(): Flow<List<Flashcard>> =
-        db.flashcardDao().observarParaRevisar()
-
-    override fun observarFlashcardsDeSesion(idSesion: String): Flow<List<Flashcard>> =
-        db.flashcardDao().observarPorSesion(idSesion)
-
-    override suspend fun actualizarFlashcard(flashcard: Flashcard) {
-        db.flashcardDao().guardarOActualizar(flashcard)
-    }
-
-    override fun observarContadorFlashcardsHoy(): Flow<Int> =
-        db.flashcardDao().contarParaHoy()
-
     override suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): com.toka.studyboost.datos.Usuario {
         val reqRegistro = RegisterRequest(nombre, email, contrasena)
         RetrofitClient.instance.register(reqRegistro)

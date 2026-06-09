@@ -20,12 +20,6 @@ interface RepositorioEstudio {
     suspend fun obtenerPreguntasDeSesion(idSesion: String): List<PreguntaTest>
     suspend fun guardarResultadoTest(idSesion: String, aciertos: Int, total: Int)
     
-    // —— Flashcards ————————————————————————————————————————————————————————————
-    fun observarFlashcardsParaHoy(): Flow<List<Flashcard>>
-    fun observarFlashcardsDeSesion(idSesion: String): Flow<List<Flashcard>>
-    suspend fun actualizarFlashcard(flashcard: Flashcard)
-    fun observarContadorFlashcardsHoy(): Flow<Int>
-    
     // —— Autenticación —————————————————————————————————————————————————————————
     suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): Usuario
     suspend fun iniciarSesion(email: String, contrasena: String): Usuario
