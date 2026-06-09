@@ -6,12 +6,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.toka.studyboost.ui.theme.*
@@ -26,6 +29,8 @@ fun PantallaPerfil(
     val usuario = logica.usuarioActual
     var passActual by remember { mutableStateOf("") }
     var passNueva by remember { mutableStateOf("") }
+    var passActualVisible by remember { mutableStateOf(false) }
+    var passNuevaVisible by remember { mutableStateOf(false) }
     var mostrarDialogo by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -89,7 +94,16 @@ fun PantallaPerfil(
                         value = passActual,
                         onValueChange = { passActual = it },
                         label = { Text("Contraseña Actual", color = GrisClaro) },
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (passActualVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passActualVisible = !passActualVisible }) {
+                                Icon(
+                                    imageVector = if (passActualVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = GrisClaro
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = AzulMarinoProfundo,
@@ -103,7 +117,16 @@ fun PantallaPerfil(
                         value = passNueva,
                         onValueChange = { passNueva = it },
                         label = { Text("Nueva Contraseña", color = GrisClaro) },
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (passNuevaVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passNuevaVisible = !passNuevaVisible }) {
+                                Icon(
+                                    imageVector = if (passNuevaVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = GrisClaro
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = AzulMarinoProfundo,

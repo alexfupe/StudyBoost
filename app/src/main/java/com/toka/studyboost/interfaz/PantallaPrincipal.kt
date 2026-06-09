@@ -318,12 +318,7 @@ fun PantallaPrincipal(
                                                     .background(color),
                                                 contentAlignment = Alignment.CenterEnd
                                             ) {
-                                                Icon(
-                                                    Icons.Default.Delete,
-                                                    contentDescription = "Eliminar",
-                                                    tint = Blanco,
-                                                    modifier = Modifier.padding(horizontal = 20.dp)
-                                                )
+                                                // Icono eliminado para evitar bugs visuales con la flecha
                                             }
                                         },
                                         content = {
