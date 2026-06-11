@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  Genera tests y flashcards automáticamente a partir de tus apuntes usando inteligencia artificial.<br/>
+  Genera resumenes y tests automáticamente a partir de tus apuntes usando inteligencia artificial.<br/>
   Estudia de forma más eficiente con repetición espaciada y análisis de rendimiento.
 </p>
 
